@@ -1,29 +1,5 @@
 /*global RSVP, describe, specify, it, assert */
 describe("RSVP extensions", function() {
-  describe("self fulfillment", function(){
-    it("treats self fulfillment as the recursive base case", function(done){
-      var aDefer = new RSVP.defer(),
-      bDefer = new RSVP.defer(),
-      promiseA = aDefer.promise,
-      promiseB = bDefer.promise;
-
-      promiseA.then(function(a){
-        setTimeout(function(){
-          bDefer.resolve(promiseB);
-        }, 1);
-
-        return promiseB;
-      });
-
-      promiseB.then(function(c){
-        done();
-      })
-
-      aDefer.resolve(promiseA);
-    });
-  });
-    });
-  });
 
   describe("Promise constructor", function() {
     it('should exist and have length 1', function() {
@@ -140,21 +116,32 @@ describe("RSVP extensions", function() {
 
 
       it('should assimilate two levels deep, for fulfillment of self fulfilling promises', function(done) {
-        var originalPromise, promise;
-        originalPromise = new RSVP.Promise(function(resolve) {
-          setTimeout(function() {
-            resolve(originalPromise);
-          }, 0)
-        });
+        var PromiseEntity, promiseEntity, promise;
+
+        PromiseEntity = function() {
+          var self = this;
+          this.promise = new RSVP.Promise(function(resolve) {
+            setTimeout(function() {
+              resolve();
+            }, 0);
+          });
+          this.then = function(success) {
+            return this.promise.then(function() {
+              return success(self);
+            });
+          }
+        };
+
+        promiseEntity = new PromiseEntity();
 
         promise = new RSVP.Promise(function(resolve) {
           setTimeout(function() {
-            resolve(originalPromise);
+            resolve(promiseEntity);
           }, 0);
         });
 
         promise.then(function(value) {
-          assert.equal(value, originalPromise);
+          assert.equal(value, promiseEntity);
           done();
         });
       });
